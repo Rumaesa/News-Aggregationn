@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PulseWire — Live News Sentiment</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:#0a0a0f;--surface:#12121a;--border:#1e1e2e;
+    --text:#e8e8f0;--muted:#6b6b85;
+    --pos:#00e5a0;--neg:#ff4466;--neu:#7b7bff;--accent:#ffd166;
+  }
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden}
+
+  /* Config Banner */
+  #configBanner {
+    background: rgba(255,209,102,0.08);
+    border-bottom: 1px solid rgba(255,209,102,0.2);
+    padding: 0.6rem 2rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    font-size: 0.78rem;
+  }
+  #configBanner label { color: var(--accent); font-family:'DM Mono',monospace; font-size:0.7rem; }
+  #apiInput {
+    background: rgba(255,255,255,0.05);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    font-size: 0.72rem;
+    padding: 0.3rem 0.7rem;
+    width: 320px;
+  }
+  #apiInput:focus { outline: none; border-color: var(--accent); }
+  #backendInput {
+    background: rgba(255,255,255,0.05);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    font-size: 0.72rem;
+    padding: 0.3rem 0.7rem;
+    width: 200px;
+  }
+  #backendInput:focus { outline: none; border-color: var(--accent); }
+  .config-hint { color: var(--muted); font-size: 0.68rem; }
+  .config-hint a { color: var(--accent); }
+
+  header {
+    border-bottom:1px solid var(--border);
+    padding:1.1rem 2rem;
+    display:flex;align-items:center;justify-content:space-between;
+    position:sticky;top:0;
+    background:rgba(10,10,15,0.95);backdrop-filter:blur(12px);z-index:100;
+  }
+  .logo{font-family:'Playfair Display',serif;font-size:1.5rem;font-weight:900;color:var(--accent)}
+  .logo span{color:var(--text)}
+  .live-badge{display:flex;align-items:center;gap:0.5rem;font-family:'DM Mono',monospace;font-size:0.7rem;color:var(--pos)}
+  .live-dot{width:7px;height:7px;background:var(--pos);border-radius:50%;animation:pulse 1.4s ease-in-out infinite}
+  @keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.4;transform:scale(1.4)}}
+  .header-right{display:flex;align-items:center;gap:0.8rem}
+  .source-btn{padding:.28rem .75rem;border-radius:20px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:.72rem;font-family:'DM Mono',monospace;cursor:pointer;transition:all .2s}
+  .source-btn.active,.source-btn:hover{border-color:var(--accent);color:var(--accent)}
+
+  /* Search bar */
+  .search-wrap {
+    position: relative;
+    display: flex;
+    align-items: center;
+  }
+  #searchInput {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.8rem;
+    padding: 0.35rem 2.2rem 0.35rem 0.8rem;
+    width: 200px;
+    transition: border-color 0.2s, width 0.3s;
+  }
+  #searchInput:focus { outline: none; border-color: var(--accent); width: 260px; }
+  .search-btn {
+    position: absolute; right: 0.5rem;
+    background: none; border: none; color: var(--muted);
+    cursor: pointer; font-size: 0.9rem;
+  }
+
+  main{display:grid;grid-template-columns:1fr 330px;grid-template-rows:auto 1fr;height:calc(100vh - 100px)}
+
+  .stats-bar{grid-column:1/-1;display:grid;grid-template-columns:repeat(4,1fr);border-bottom:1px solid var(--border)}
+  .stat{padding:.9rem 1.5rem;border-right:1px solid var(--border)}
+  .stat:last-child{border-right:none}
+  .stat-label{font-family:'DM Mono',monospace;font-size:.62rem;letter-spacing:.1em;color:var(--muted);text-transform:uppercase;margin-bottom:.25rem}
+  .stat-value{font-size:1.5rem;font-weight:700;font-family:'Playfair Display',serif;line-height:1}
+  .stat-sub{font-size:.68rem;color:var(--muted);margin-top:.15rem}
+  .pos{color:var(--pos)}.neg{color:var(--neg)}.neu{color:var(--neu)}
+
+  .news-feed{overflow-y:auto;padding:1.2rem 1.5rem;display:flex;flex-direction:column;gap:.85rem;border-right:1px solid var(--border)}
+  .news-feed::-webkit-scrollbar{width:3px}
+  .news-feed::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+
+  .feed-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:.4rem}
+  .feed-title{font-family:'DM Mono',monospace;font-size:.67rem;letter-spacing:.12em;color:var(--muted);text-transform:uppercase}
+  .feed-meta{font-family:'DM Mono',monospace;font-size:.62rem;color:var(--muted)}
+
+  .news-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:.9rem 1.1rem;cursor:pointer;transition:all .25s;position:relative;overflow:hidden;animation:slideIn .35s ease forwards;opacity:0;transform:translateY(8px)}
+  @keyframes slideIn{to{opacity:1;transform:translateY(0)}}
+  .news-card:hover{border-color:rgba(255,209,102,.3);transform:translateY(-1px);box-shadow:0 6px 24px rgba(0,0,0,.3)}
+  .news-card a{text-decoration:none;color:inherit}
+  .news-card::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;border-radius:3px 0 0 3px}
+  .news-card.positive::before{background:var(--pos)}
+  .news-card.negative::before{background:var(--neg)}
+  .news-card.neutral::before{background:var(--neu)}
+
+  .card-meta{display:flex;align-items:center;gap:.5rem;margin-bottom:.4rem}
+  .source-tag{font-family:'DM Mono',monospace;font-size:.6rem;letter-spacing:.08em;color:var(--accent);text-transform:uppercase}
+  .dot-sep{color:var(--border)}
+  .card-time{font-size:.62rem;color:var(--muted);font-family:'DM Mono',monospace}
+  .sentiment-pill{margin-left:auto;padding:.12rem .45rem;border-radius:20px;font-size:.6rem;font-family:'DM Mono',monospace;font-weight:500}
+  .sentiment-pill.positive{background:rgba(0,229,160,.1);color:var(--pos);border:1px solid rgba(0,229,160,.2)}
+  .sentiment-pill.negative{background:rgba(255,68,102,.1);color:var(--neg);border:1px solid rgba(255,68,102,.2)}
+  .sentiment-pill.neutral{background:rgba(123,123,255,.1);color:var(--neu);border:1px solid rgba(123,123,255,.2)}
+  .card-title{font-size:.9rem;font-weight:500;line-height:1.4;margin-bottom:.35rem}
+  .card-summary{font-size:.75rem;color:var(--muted);line-height:1.5;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+  .card-score-bar{margin-top:.6rem;height:2px;background:var(--border);border-radius:2px;overflow:hidden}
+  .card-score-fill{height:100%;border-radius:2px;transition:width .6s ease}
+  .card-score-label{font-family:'DM Mono',monospace;font-size:.58rem;color:var(--muted);margin-top:.25rem}
+
+  /* Skeleton loader */
+  .skeleton{background:linear-gradient(90deg,var(--surface) 25%,rgba(255,255,255,.04) 50%,var(--surface) 75%);background-size:200% 100%;animation:shimmer 1.4s infinite;border-radius:8px;height:90px;border:1px solid var(--border)}
+  @keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+
+  /* Error state */
+  .error-box{background:rgba(255,68,102,.07);border:1px solid rgba(255,68,102,.2);border-radius:10px;padding:1.2rem;text-align:center}
+  .error-box h3{color:var(--neg);font-size:.9rem;margin-bottom:.4rem}
+  .error-box p{font-size:.75rem;color:var(--muted);line-height:1.6}
+  .error-box code{font-family:'DM Mono',monospace;font-size:.7rem;background:rgba(255,255,255,.05);padding:.1rem .3rem;border-radius:4px}
+
+  /* Sidebar */
+  .sidebar{overflow-y:auto;padding:1.2rem;display:flex;flex-direction:column;gap:1.2rem}
+  .sidebar::-webkit-scrollbar{width:3px}
+  .sidebar::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+  .widget{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:.9rem 1rem}
+  .widget-title{font-family:'DM Mono',monospace;font-size:.62rem;letter-spacing:.12em;color:var(--muted);text-transform:uppercase;margin-bottom:.75rem}
+
+  .donut-wrap{display:flex;align-items:center;gap:1rem}
+  .donut-legend{display:flex;flex-direction:column;gap:.45rem;flex:1}
+  .legend-item{display:flex;align-items:center;gap:.45rem;font-size:.72rem}
+  .legend-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+  .legend-pct{margin-left:auto;font-family:'DM Mono',monospace;font-size:.7rem}
+
+  .topic-list{display:flex;flex-direction:column;gap:.55rem}
+  .topic-row{display:flex;flex-direction:column;gap:.2rem}
+  .topic-label-row{display:flex;justify-content:space-between;font-size:.7rem}
+  .topic-name{color:var(--text)}.topic-count{font-family:'DM Mono',monospace;color:var(--muted);font-size:.66rem}
+  .topic-bar-bg{height:3px;background:var(--border);border-radius:2px;overflow:hidden}
+  .topic-bar-fill{height:100%;border-radius:2px;background:linear-gradient(90deg,var(--accent),rgba(255,209,102,.3));transition:width .8s ease}
+
+  .alert-box{background:rgba(255,68,102,.07);border:1px solid rgba(255,68,102,.2);border-radius:8px;padding:.75rem 1rem;display:none}
+  .alert-title{font-family:'DM Mono',monospace;font-size:.62rem;color:var(--neg);letter-spacing:.08em;margin-bottom:.3rem;text-transform:uppercase}
+  .alert-text{font-size:.72rem;color:var(--muted);line-height:1.5}
+
+  .refresh-btn{background:none;border:1px solid var(--border);color:var(--muted);padding:.22rem .55rem;border-radius:6px;font-size:.68rem;cursor:pointer;font-family:'DM Mono',monospace;transition:all .2s}
+  .refresh-btn:hover{border-color:var(--accent);color:var(--accent)}
+  .refresh-btn:disabled{opacity:.4;cursor:not-allowed}
+
+  .spin{animation:spin .8s linear infinite;display:inline-block}
+  @keyframes spin{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+
+<!-- Config Banner -->
+<div id="configBanner">
+  <label>BACKEND URL</label>
+  <input id="backendInput" type="text" value="http://localhost:8000" placeholder="http://localhost:8000"/>
+  <label>API KEY (optional — set on server)</label>
+  <input id="apiInput" type="password" placeholder="Passed via server .env — leave blank"/>
+  <span class="config-hint">Get a free key at <a href="https://newsapi.org/register" target="_blank">newsapi.org/register</a></span>
+</div>
+
+<header>
+  <div class="logo">Pulse<span>Wire</span></div>
+  <div class="live-badge"><div class="live-dot"></div>LIVE</div>
+  <div class="header-right">
+    <div id="sourceFilters">
+      <button class="source-btn active" onclick="setSource('all',this)">ALL</button>
+      <button class="source-btn" onclick="setSource('reuters',this)">Reuters</button>
+      <button class="source-btn" onclick="setSource('bbc',this)">BBC</button>
+      <button class="source-btn" onclick="setSource('bloomberg',this)">Bloomberg</button>
+      <button class="source-btn" onclick="setSource('techcrunch',this)">TechCrunch</button>
+    </div>
+    <div class="search-wrap">
+      <input id="searchInput" type="text" placeholder="Search topics..." onkeydown="if(event.key==='Enter')doSearch()"/>
+      <button class="search-btn" onclick="doSearch()">⌕</button>
+    </div>
+  </div>
+</header>
+
+<main>
+  <div class="stats-bar">
+    <div class="stat"><div class="stat-label">Total Articles</div><div class="stat-value" id="sTotal">—</div><div class="stat-sub" id="sFetchedAt">—</div></div>
+    <div class="stat"><div class="stat-label">Positive</div><div class="stat-value pos" id="sPosPct">—</div><div class="stat-sub" id="sPosCount">—</div></div>
+    <div class="stat"><div class="stat-label">Negative</div><div class="stat-value neg" id="sNegPct">—</div><div class="stat-sub" id="sNegCount">—</div></div>
+    <div class="stat"><div class="stat-label">Avg Score</div><div class="stat-value neu" id="sAvg">—</div><div class="stat-sub">Scale −1 to +1</div></div>
+  </div>
+
+  <div class="news-feed">
+    <div class="feed-header">
+      <span class="feed-title" id="feedLabel">Latest Articles</span>
+      <button class="refresh-btn" id="refreshBtn" onclick="loadNews()">↻ Refresh</button>
+    </div>
+    <div id="feedContainer"></div>
+  </div>
+
+  <div class="sidebar">
+    <div class="widget">
+      <div class="widget-title">Sentiment Distribution</div>
+      <div class="donut-wrap">
+        <svg width="90" height="90" viewBox="0 0 100 100">
+          <circle cx="50" cy="50" r="38" fill="none" stroke="#1e1e2e" stroke-width="14"/>
+          <circle id="dPos" cx="50" cy="50" r="38" fill="none" stroke="#00e5a0" stroke-width="14"
+            stroke-dasharray="0 239" transform="rotate(-90 50 50)" style="transition:stroke-dasharray .8s ease"/>
+          <circle id="dNeg" cx="50" cy="50" r="38" fill="none" stroke="#ff4466" stroke-width="14"
+            stroke-dasharray="0 239" transform="rotate(-90 50 50)" style="transition:stroke-dasharray .8s ease .1s"/>
+          <circle id="dNeu" cx="50" cy="50" r="38" fill="none" stroke="#7b7bff" stroke-width="14"
+            stroke-dasharray="0 239" transform="rotate(-90 50 50)" style="transition:stroke-dasharray .8s ease .2s"/>
+        </svg>
+        <div class="donut-legend">
+          <div class="legend-item"><div class="legend-dot" style="background:var(--pos)"></div>Positive<span class="legend-pct pos" id="lpPos">—</span></div>
+          <div class="legend-item"><div class="legend-dot" style="background:var(--neg)"></div>Negative<span class="legend-pct neg" id="lpNeg">—</span></div>
+          <div class="legend-item"><div class="legend-dot" style="background:var(--neu)"></div>Neutral<span class="legend-pct neu" id="lpNeu">—</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="widget">
+      <div class="widget-title">24h Sentiment Trend</div>
+      <canvas id="trendCanvas" style="width:100%;height:110px"></canvas>
+    </div>
+
+    <div class="widget">
+      <div class="widget-title">Top Topics</div>
+      <div class="topic-list" id="topicList"><div class="stat-sub">Fetching...</div></div>
+    </div>
+
+    <div class="alert-box" id="alertBox">
+      <div class="alert-title">⚠ Sentiment Alert</div>
+      <div class="alert-text" id="alertText"></div>
+    </div>
+  </div>
+</main>
+
+<script>
+let activeSource = 'all';
+let isSearchMode = false;
+
+function getBackend() {
+  return document.getElementById('backendInput').value.replace(/\/+$/,'');
+}
+
+function setSource(src, btn) {
+  activeSource = src;
+  isSearchMode = false;
+  document.getElementById('searchInput').value = '';
+  document.querySelectorAll('.source-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('feedLabel').textContent = src === 'all' ? 'Latest Articles' : src.charAt(0).toUpperCase()+src.slice(1)+' News';
+  loadNews();
+}
+
+function doSearch() {
+  const q = document.getElementById('searchInput').value.trim();
+  if (!q) return;
+  isSearchMode = true;
+  document.getElementById('feedLabel').textContent = `Results for "${q}"`;
+  loadSearch(q);
+}
+
+// ── Skeletons
+function showSkeletons(n=5) {
+  const c = document.getElementById('feedContainer');
+  c.innerHTML = Array(n).fill(`<div class="skeleton" style="margin-bottom:.85rem"></div>`).join('');
+}
+
+// ── Load news from backend
+async function loadNews() {
+  const btn = document.getElementById('refreshBtn');
+  btn.disabled = true; btn.innerHTML = '<span class="spin">↻</span>';
+  showSkeletons();
+  try {
+    const url = `${getBackend()}/news?source=${activeSource}&page_size=20`;
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`Server returned ${res.status}`);
+    const data = await res.json();
+    renderFeed(data);
+    loadTrend();
+  } catch(e) {
+    showError(e.message);
+  } finally {
+    btn.disabled = false; btn.textContent = '↻ Refresh';
+  }
+}
+
+async function loadSearch(q) {
+  showSkeletons();
+  try {
+    const url = `${getBackend()}/news/search?q=${encodeURIComponent(q)}&page_size=20`;
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`Server returned ${res.status}`);
+    const data = await res.json();
+    renderFeed(data);
+  } catch(e) {
+    showError(e.message);
+  }
+}
+
+async function loadTrend() {
+  try {
+    const res = await fetch(`${getBackend()}/sentiment/trend`);
+    if (!res.ok) return;
+    const data = await res.json();
+    drawTrend(data);
+  } catch(e) { /* silently fail trend */ }
+}
+
+// ── Render
+function renderFeed(data) {
+  const c = document.getElementById('feedContainer');
+  c.innerHTML = '';
+
+  if (!data.articles || !data.articles.length) {
+    c.innerHTML = `<div class="error-box"><h3>No articles found</h3><p>Try a different source or search term.</p></div>`;
+    return;
+  }
+
+  data.articles.forEach((a, i) => {
+    const card = document.createElement('div');
+    card.className = `news-card ${a.sentiment}`;
+    card.style.animationDelay = `${i*0.04}s`;
+    const fillColor = a.sentiment==='positive'?'var(--pos)':a.sentiment==='negative'?'var(--neg)':'var(--neu)';
+    const score = a.sentiment_score;
+    const barWidth = Math.abs(score)*100;
+    card.innerHTML = `
+      <div class="card-meta">
+        <span class="source-tag">${a.source}</span>
+        <span class="dot-sep">·</span>
+        <span class="card-time">${a.published_at}</span>
+        <span class="sentiment-pill ${a.sentiment}">${a.sentiment}</span>
+      </div>
+      <a href="${a.url}" target="_blank" rel="noopener">
+        <div class="card-title">${a.title}</div>
+      </a>
+      <div class="card-summary">${a.summary}</div>
+      <div class="card-score-bar">
+        <div class="card-score-fill" style="width:${barWidth}%;background:${fillColor}"></div>
+      </div>
+      <div class="card-score-label">Sentiment score: ${score > 0 ? '+' : ''}${score}</div>
+    `;
+    c.appendChild(card);
+  });
+
+  updateStats(data.stats, data.fetched_at);
+  updateDonut(data.stats);
+  updateTopics(data.articles);
+  checkAlert(data.stats);
+}
+
+function updateStats(s, fetchedAt) {
+  document.getElementById('sTotal').textContent = s.total;
+  document.getElementById('sPosPct').textContent = s.positive_pct + '%';
+  document.getElementById('sNegPct').textContent = s.negative_pct + '%';
+  document.getElementById('sPosCount').textContent = `${s.positive} articles`;
+  document.getElementById('sNegCount').textContent = `${s.negative} articles`;
+  document.getElementById('sAvg').textContent = (s.avg_score >= 0 ? '+' : '') + s.avg_score;
+  document.getElementById('sFetchedAt').textContent = fetchedAt;
+}
+
+function updateDonut(s) {
+  const circ = 2 * Math.PI * 38;
+  const posArc = s.positive_pct/100 * circ;
+  const negArc = s.negative_pct/100 * circ;
+  const neuArc = s.neutral_pct/100 * circ;
+  function setArc(id, arc, offset) {
+    const el = document.getElementById(id);
+    el.style.strokeDasharray = `${arc} ${circ-arc}`;
+    el.style.strokeDashoffset = -offset;
+  }
+  setArc('dPos', posArc, 0);
+  setArc('dNeg', negArc, posArc);
+  setArc('dNeu', neuArc, posArc+negArc);
+  document.getElementById('lpPos').textContent = s.positive_pct + '%';
+  document.getElementById('lpNeg').textContent = s.negative_pct + '%';
+  document.getElementById('lpNeu').textContent = s.neutral_pct + '%';
+}
+
+function updateTopics(articles) {
+  const topics = {};
+  articles.forEach(a => {
+    // Derive topic from source as a simple proxy
+    const t = a.source || 'General';
+    topics[t] = (topics[t]||0)+1;
+  });
+  const sorted = Object.entries(topics).sort((a,b)=>b[1]-a[1]).slice(0,6);
+  const max = sorted[0]?.[1]||1;
+  document.getElementById('topicList').innerHTML = sorted.map(([name,count])=>`
+    <div class="topic-row">
+      <div class="topic-label-row"><span class="topic-name">${name}</span><span class="topic-count">${count}</span></div>
+      <div class="topic-bar-bg"><div class="topic-bar-fill" style="width:${count/max*100}%"></div></div>
+    </div>
+  `).join('');
+}
+
+function checkAlert(s) {
+  const box = document.getElementById('alertBox');
+  if (s.negative_pct > 45) {
+    box.style.display = 'block';
+    document.getElementById('alertText').textContent =
+      `Negative sentiment is elevated at ${s.negative_pct}%. Avg score: ${s.avg_score}. Monitor for market or public sentiment impact.`;
+  } else {
+    box.style.display = 'none';
+  }
+}
+
+function showError(msg) {
+  document.getElementById('feedContainer').innerHTML = `
+    <div class="error-box">
+      <h3>Could not connect to backend</h3>
+      <p>${msg}</p>
+      <p style="margin-top:.6rem">Make sure your FastAPI server is running:<br>
+      <code>uvicorn main:app --reload</code><br><br>
+      And your <code>NEWS_API_KEY</code> is set in <code>.env</code></p>
+    </div>`;
+}
+
+// ── Trend Chart (from live API data)
+function drawTrend(trendData) {
+  const canvas = document.getElementById('trendCanvas');
+  const dpr = window.devicePixelRatio || 1;
+  const W = canvas.offsetWidth; const H = 110;
+  canvas.width = W * dpr; canvas.height = H * dpr;
+  const ctx = canvas.getContext('2d'); ctx.scale(dpr, dpr);
+  ctx.clearRect(0,0,W,H);
+
+  const n = trendData.length;
+  if (n < 2) return;
+
+  const datasets = [
+    { key:'positive_pct', color:'#00e5a0' },
+    { key:'negative_pct', color:'#ff4466' },
+    { key:'neutral_pct',  color:'#7b7bff' },
+  ];
+
+  // Grid
+  [0.2,0.4,0.6,0.8].forEach(r=>{
+    ctx.strokeStyle='rgba(30,30,46,0.7)';ctx.lineWidth=1;
+    ctx.beginPath();ctx.moveTo(0,H*r);ctx.lineTo(W,H*r);ctx.stroke();
+  });
+
+  datasets.forEach(ds=>{
+    const vals = trendData.map(d=>d[ds.key]);
+    const pts = vals.map((v,i)=>({x:i/(n-1)*W, y:H - v/100*(H*0.88) - H*0.05}));
+    const g = ctx.createLinearGradient(0,0,0,H);
+    g.addColorStop(0,ds.color+'35');g.addColorStop(1,ds.color+'00');
+    ctx.beginPath();ctx.moveTo(pts[0].x,H);
+    pts.forEach(p=>ctx.lineTo(p.x,p.y));
+    ctx.lineTo(pts[pts.length-1].x,H);ctx.closePath();
+    ctx.fillStyle=g;ctx.fill();
+    ctx.beginPath();ctx.strokeStyle=ds.color;ctx.lineWidth=1.5;ctx.lineJoin='round';
+    pts.forEach((p,i)=>i===0?ctx.moveTo(p.x,p.y):ctx.lineTo(p.x,p.y));
+    ctx.stroke();
+  });
+
+  // X labels
+  ctx.fillStyle='#6b6b85';ctx.font=`9px DM Mono,monospace`;ctx.textAlign='center';
+  trendData.forEach((d,i)=>{
+    if(i%3===0) ctx.fillText(d.hour, i/(n-1)*W, H-2);
+  });
+}
+
+// Init
+loadNews();
+// Auto-refresh every 5 minutes
+setInterval(()=>{ if(!isSearchMode) loadNews(); }, 5*60*1000);
+</script>
+</body>
+</html>

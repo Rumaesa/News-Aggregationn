@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>PulseWire — Architecture</title>
+<style>
+  body { font-family: 'Segoe UI', sans-serif; background: #0a0a0f; color: #e8e8f0; margin: 0; padding: 2rem; }
+  h2 { color: #ffd166; font-size: 1.1rem; margin-bottom: 1.5rem; letter-spacing: 0.05em; }
+  svg { width: 100%; max-width: 860px; display: block; margin: 0 auto; }
+</style>
+</head>
+<body>
+<h2>PulseWire — System Architecture</h2>
+<svg viewBox="0 0 860 420" xmlns="http://www.w3.org/2000/svg" font-family="'Segoe UI', monospace">
+  <defs>
+    <marker id="arrow" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+      <polygon points="0 0, 8 3, 0 6" fill="#6b6b85"/>
+    </marker>
+    <marker id="arrowAccent" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+      <polygon points="0 0, 8 3, 0 6" fill="#ffd166"/>
+    </marker>
+  </defs>
+
+  <!-- Background panels -->
+  <rect x="10" y="10" width="175" height="400" rx="10" fill="#12121a" stroke="#1e1e2e" stroke-width="1.5"/>
+  <rect x="225" y="10" width="200" height="400" rx="10" fill="#12121a" stroke="#1e1e2e" stroke-width="1.5"/>
+  <rect x="465" y="10" width="175" height="400" rx="10" fill="#12121a" stroke="#1e1e2e" stroke-width="1.5"/>
+  <rect x="680" y="10" width="170" height="400" rx="10" fill="#12121a" stroke="#1e1e2e" stroke-width="1.5"/>
+
+  <!-- Layer labels -->
+  <text x="97" y="35" text-anchor="middle" fill="#6b6b85" font-size="10" letter-spacing="1">DATA SOURCES</text>
+  <text x="325" y="35" text-anchor="middle" fill="#6b6b85" font-size="10" letter-spacing="1">FASTAPI BACKEND</text>
+  <text x="552" y="35" text-anchor="middle" fill="#6b6b85" font-size="10" letter-spacing="1">PROCESSING</text>
+  <text x="765" y="35" text-anchor="middle" fill="#6b6b85" font-size="10" letter-spacing="1">FRONTEND</text>
+
+  <!-- News Sources -->
+  <rect x="25" y="55" width="145" height="38" rx="6" fill="#1a1a2e" stroke="#ffd166" stroke-width="1"/>
+  <text x="97" y="70" text-anchor="middle" fill="#ffd166" font-size="11" font-weight="bold">NewsAPI.org</text>
+  <text x="97" y="84" text-anchor="middle" fill="#6b6b85" font-size="9">Top Headlines + Search</text>
+
+  <rect x="25" y="108" width="145" height="32" rx="6" fill="#1a1a2e" stroke="#1e1e2e" stroke-width="1"/>
+  <text x="97" y="120" text-anchor="middle" fill="#e8e8f0" font-size="10">Reuters</text>
+  <text x="97" y="132" text-anchor="middle" fill="#6b6b85" font-size="9">source ID: reuters</text>
+
+  <rect x="25" y="152" width="145" height="32" rx="6" fill="#1a1a2e" stroke="#1e1e2e" stroke-width="1"/>
+  <text x="97" y="164" text-anchor="middle" fill="#e8e8f0" font-size="10">BBC News</text>
+  <text x="97" y="176" text-anchor="middle" fill="#6b6b85" font-size="9">source ID: bbc-news</text>
+
+  <rect x="25" y="196" width="145" height="32" rx="6" fill="#1a1a2e" stroke="#1e1e2e" stroke-width="1"/>
+  <text x="97" y="208" text-anchor="middle" fill="#e8e8f0" font-size="10">Bloomberg</text>
+  <text x="97" y="220" text-anchor="middle" fill="#6b6b85" font-size="9">source ID: bloomberg</text>
+
+  <rect x="25" y="240" width="145" height="32" rx="6" fill="#1a1a2e" stroke="#1e1e2e" stroke-width="1"/>
+  <text x="97" y="252" text-anchor="middle" fill="#e8e8f0" font-size="10">TechCrunch</text>
+  <text x="97" y="264" text-anchor="middle" fill="#6b6b85" font-size="9">source ID: techcrunch</text>
+
+  <!-- Backend -->
+  <rect x="240" y="55" width="170" height="44" rx="6" fill="#0d2b1a" stroke="#00e5a0" stroke-width="1.5"/>
+  <text x="325" y="73" text-anchor="middle" fill="#00e5a0" font-size="11" font-weight="bold">FastAPI App</text>
+  <text x="325" y="88" text-anchor="middle" fill="#6b6b85" font-size="9">uvicorn · Python 3.11+</text>
+
+  <rect x="240" y="116" width="170" height="38" rx="6" fill="#1a1a2e" stroke="#1e1e2e" stroke-width="1"/>
+  <text x="325" y="130" text-anchor="middle" fill="#e8e8f0" font-size="10">GET /news</text>
+  <text x="325" y="144" text-anchor="middle" fill="#6b6b85" font-size="9">?source=&amp;page_size=</text>
+
+  <rect x="240" y="165" width="170" height="38" rx="6" fill="#1a1a2e" stroke="#1e1e2e" stroke-width="1"/>
+  <text x="325" y="179" text-anchor="middle" fill="#e8e8f0" font-size="10">GET /news/search</text>
+  <text x="325" y="193" text-anchor="middle" fill="#6b6b85" font-size="9">?q=keyword</text>
+
+  <rect x="240" y="214" width="170" height="38" rx="6" fill="#1a1a2e" stroke="#1e1e2e" stroke-width="1"/>
+  <text x="325" y="228" text-anchor="middle" fill="#e8e8f0" font-size="10">GET /sentiment/trend</text>
+  <text x="325" y="242" text-anchor="middle" fill="#6b6b85" font-size="9">12h hourly breakdown</text>
+
+  <rect x="240" y="263" width="170" height="30" rx="6" fill="#1a1a2e" stroke="#1e1e2e" stroke-width="1"/>
+  <text x="325" y="282" text-anchor="middle" fill="#6b6b85" font-size="9">CORS enabled · JSON responses</text>
+
+  <!-- Processing -->
+  <rect x="480" y="55" width="145" height="44" rx="6" fill="#1a1a28" stroke="#7b7bff" stroke-width="1.5"/>
+  <text x="552" y="73" text-anchor="middle" fill="#7b7bff" font-size="11" font-weight="bold">VADER Sentiment</text>
+  <text x="552" y="87" text-anchor="middle" fill="#6b6b85" font-size="9">vaderSentiment library</text>
+
+  <rect x="480" y="116" width="145" height="38" rx="6" fill="#1a1a2e" stroke="#1e1e2e" stroke-width="1"/>
+  <text x="552" y="130" text-anchor="middle" fill="#00e5a0" font-size="10">POSITIVE</text>
+  <text x="552" y="144" text-anchor="middle" fill="#6b6b85" font-size="9">compound ≥ 0.05</text>
+
+  <rect x="480" y="165" width="145" height="38" rx="6" fill="#1a1a2e" stroke="#1e1e2e" stroke-width="1"/>
+  <text x="552" y="179" text-anchor="middle" fill="#ff4466" font-size="10">NEGATIVE</text>
+  <text x="552" y="193" text-anchor="middle" fill="#6b6b85" font-size="9">compound ≤ −0.05</text>
+
+  <rect x="480" y="214" width="145" height="38" rx="6" fill="#1a1a2e" stroke="#1e1e2e" stroke-width="1"/>
+  <text x="552" y="228" text-anchor="middle" fill="#7b7bff" font-size="10">NEUTRAL</text>
+  <text x="552" y="242" text-anchor="middle" fill="#6b6b85" font-size="9">−0.05 &lt; compound &lt; 0.05</text>
+
+  <rect x="480" y="263" width="145" height="38" rx="6" fill="#1a1a2e" stroke="#1e1e2e" stroke-width="1"/>
+  <text x="552" y="277" text-anchor="middle" fill="#e8e8f0" font-size="10">httpx async client</text>
+  <text x="552" y="291" text-anchor="middle" fill="#6b6b85" font-size="9">Non-blocking API calls</text>
+
+  <!-- Frontend -->
+  <rect x="695" y="55" width="145" height="44" rx="6" fill="#2a1a0a" stroke="#ffd166" stroke-width="1.5"/>
+  <text x="767" y="73" text-anchor="middle" fill="#ffd166" font-size="11" font-weight="bold">HTML Dashboard</text>
+  <text x="767" y="87" text-anchor="middle" fill="#6b6b85" font-size="9">Vanilla JS · Canvas charts</text>
+
+  <rect x="695" y="116" width="145" height="32" rx="6" fill="#1a1a2e" stroke="#1e1e2e" stroke-width="1"/>
+  <text x="767" y="128" text-anchor="middle" fill="#e8e8f0" font-size="10">Live News Cards</text>
+  <text x="767" y="140" text-anchor="middle" fill="#6b6b85" font-size="9">Sentiment color coded</text>
+
+  <rect x="695" y="159" width="145" height="32" rx="6" fill="#1a1a2e" stroke="#1e1e2e" stroke-width="1"/>
+  <text x="767" y="171" text-anchor="middle" fill="#e8e8f0" font-size="10">Donut Chart</text>
+  <text x="767" y="183" text-anchor="middle" fill="#6b6b85" font-size="9">Pos / Neg / Neutral %</text>
+
+  <rect x="695" y="202" width="145" height="32" rx="6" fill="#1a1a2e" stroke="#1e1e2e" stroke-width="1"/>
+  <text x="767" y="214" text-anchor="middle" fill="#e8e8f0" font-size="10">Trend Line Chart</text>
+  <text x="767" y="226" text-anchor="middle" fill="#6b6b85" font-size="9">Canvas, 12h history</text>
+
+  <rect x="695" y="245" width="145" height="32" rx="6" fill="#1a1a2e" stroke="#1e1e2e" stroke-width="1"/>
+  <text x="767" y="257" text-anchor="middle" fill="#e8e8f0" font-size="10">Source Filter + Search</text>
+  <text x="767" y="269" text-anchor="middle" fill="#6b6b85" font-size="9">Auto-refresh every 5min</text>
+
+  <!-- Arrows: sources → backend -->
+  <line x1="170" y1="124" x2="238" y2="135" stroke="#6b6b85" stroke-width="1.2" marker-end="url(#arrow)"/>
+  <line x1="170" y1="168" x2="238" y2="155" stroke="#6b6b85" stroke-width="1.2" marker-end="url(#arrow)"/>
+  <line x1="170" y1="212" x2="238" y2="175" stroke="#6b6b85" stroke-width="1.2" marker-end="url(#arrow)"/>
+  <line x1="170" y1="256" x2="238" y2="195" stroke="#6b6b85" stroke-width="1.2" marker-end="url(#arrow)"/>
+
+  <!-- Arrows: backend → processing -->
+  <line x1="410" y1="135" x2="478" y2="77" stroke="#6b6b85" stroke-width="1.2" marker-end="url(#arrow)"/>
+  <line x1="410" y1="184" x2="478" y2="135" stroke="#6b6b85" stroke-width="1.2" marker-end="url(#arrow)"/>
+  <line x1="410" y1="233" x2="478" y2="184" stroke="#6b6b85" stroke-width="1.2" marker-end="url(#arrow)"/>
+
+  <!-- Arrows: processing → frontend -->
+  <line x1="625" y1="77" x2="693" y2="132" stroke="#ffd166" stroke-width="1.2" marker-end="url(#arrowAccent)"/>
+  <line x1="625" y1="135" x2="693" y2="175" stroke="#ffd166" stroke-width="1.2" marker-end="url(#arrowAccent)"/>
+  <line x1="625" y1="184" x2="693" y2="214" stroke="#ffd166" stroke-width="1.2" marker-end="url(#arrowAccent)"/>
+
+  <!-- API Key note -->
+  <rect x="25" y="310" width="145" height="40" rx="6" fill="#1a1a2e" stroke="#ffd166" stroke-width="1" stroke-dasharray="4 2"/>
+  <text x="97" y="326" text-anchor="middle" fill="#ffd166" font-size="9">🔑 NEWS_API_KEY</text>
+  <text x="97" y="340" text-anchor="middle" fill="#6b6b85" font-size="9">Set in .env file</text>
+  <text x="97" y="352" text-anchor="middle" fill="#6b6b85" font-size="8">newsapi.org/register (free)</text>
+
+  <!-- Legend -->
+  <text x="430" y="390" text-anchor="middle" fill="#6b6b85" font-size="9">→ Data flow     — — Required setup</text>
+</svg>
+</body>
+</html>
